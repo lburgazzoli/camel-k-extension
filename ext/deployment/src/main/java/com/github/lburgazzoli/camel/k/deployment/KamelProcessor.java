@@ -31,13 +31,21 @@ import io.quarkus.kubernetes.spi.KubernetesResourceMetadataBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesRoleBindingBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesRoleBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesServiceAccountBuildItem;
+import io.quarkus.runtime.annotations.ConfigItem;
 import org.apache.camel.v1.IntegrationFluent;
 import org.apache.camel.v1.integrationspec.TraitsFluent;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
+
+import static com.github.lburgazzoli.camel.k.deployment.KamelSupport.decorator;
 
 
 public class KamelProcessor {
@@ -80,76 +88,107 @@ public class KamelProcessor {
         }
     }
 
-
-
     @BuildStep
-    public List<DecoratorBuildItem> createDecorators(
+    public KamelBuildItem kamel(
         ApplicationInfoBuildItem applicationInfo,
-        OutputTargetBuildItem outputTarget,
         KamelConfig config,
-        PackageConfig packageConfig,
-        Optional<MetricsCapabilityBuildItem> metricsConfiguration,
-        Optional<KubernetesClientCapabilityBuildItem> kubernetesClientConfiguration,
-        List<KubernetesAnnotationBuildItem> annotations,
-        List<KubernetesLabelBuildItem> labels,
-        List<KubernetesEnvBuildItem> envs,
-        Optional<BaseImageInfoBuildItem> baseImage,
-        Optional<ContainerImageInfoBuildItem> image,
-        Optional<KubernetesCommandBuildItem> command,
-        List<KubernetesPortBuildItem> ports,
-        Optional<KubernetesHealthLivenessPathBuildItem> livenessPath,
-        Optional<KubernetesHealthReadinessPathBuildItem> readinessPath,
-        Optional<KubernetesHealthStartupPathBuildItem> startupProbePath,
-        List<KubernetesRoleBuildItem> roles,
-        List<KubernetesClusterRoleBuildItem> clusterRoles,
-        List<KubernetesServiceAccountBuildItem> serviceAccounts,
-        List<KubernetesRoleBindingBuildItem> roleBindings,
-        Optional<CustomProjectRootBuildItem> customProjectRoot,
         List<KubernetesDeploymentTargetBuildItem> targets) {
-
-        List<DecoratorBuildItem> result = new ArrayList<>();
 
         boolean enabled = targets.stream()
                 .filter(KubernetesDeploymentTargetBuildItem::isEnabled)
                 .map(KubernetesDeploymentTargetBuildItem::getName)
                 .anyMatch(KamelConstants.KAMEL::equals);
 
-        if (!enabled) {
-            return result;
+        return new KamelBuildItem(
+                enabled,
+                config.name.orElseGet(applicationInfo::getName)
+        );
+    }
+
+    // ****************************************
+    //
+    // Traits
+    //
+    // ****************************************
+
+    @BuildStep
+    public void common(
+            KamelBuildItem kamel,
+            BuildProducer<DecoratorBuildItem> decorators) {
+
+        if (!kamel.isEnabled()) {
+            return;
         }
 
+        decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
+            integration.editOrNewMetadata()
+                    .withNamespace(ConfigProvider.getConfig().getOptionalValue("quarkus.kubernetes.namespace", String.class).orElse("default"))
+                    .endMetadata();
+        }));
+    }
 
-        Optional<Project> project = KubernetesCommonHelper.createProject(applicationInfo, customProjectRoot, outputTarget, packageConfig);
-        String name = config.name.orElseGet(applicationInfo::getName);
+    @BuildStep
+    public void container(
+        KamelBuildItem kamel,
+        BuildProducer<DecoratorBuildItem> decorators,
+        Optional<ContainerImageInfoBuildItem> image) {
 
-        image.ifPresent(i -> {
-            result.add(new DecoratorBuildItem(KamelConstants.KAMEL, new ApplyTraitToIntegrationTemplate(t -> {
-                t.editOrNewContainer().withImage(i.getImage());
-            })));
+        if (!kamel.isEnabled()) {
+            return;
+        }
+
+        image.ifPresent(value -> {
+            decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
+                integration.editOrNewSpec().editOrNewTraits()
+                        .withNewContainer()
+                        .withImage(value.getImage())
+                        .withName(null)
+                        .withPort(null)
+                        .withPortName(null)
+                        .withServicePort(null)
+                        .withServicePortName(null)
+                    .endTraitsContainer()
+                    .endIntegrationspecTraits()
+                    .endSpec();
+            }));
         });
-
-        result.add(new DecoratorBuildItem(KamelConstants.KAMEL, new ApplyTraitToIntegrationTemplate(t -> {
-            t.editOrNewIngress().withEnabled(true);
-        })));
-
-        return result;
     }
+    @BuildStep
+    public void jvm(
+            KamelBuildItem kamel,
+            BuildProducer<DecoratorBuildItem> decorators) {
 
-    public class ApplyTraitToIntegrationTemplate extends NamedResourceDecorator<IntegrationFluent<?>> {
-        final Consumer<TraitsFluent<?>> consumer;
-
-        public ApplyTraitToIntegrationTemplate(Consumer<TraitsFluent<?>> consumer) {
-            super(KamelConstants.KAMEL_INTEGRATION);
-
-            this.consumer = consumer;
+        if (!kamel.isEnabled()) {
+            return;
         }
 
-        @Override
-        public void andThenVisit(IntegrationFluent<?> integration, ObjectMeta objectMeta) {
-            var t = integration.editOrNewSpec().editOrNewTraits();
-
-            this.consumer.accept(t);
-            t.endIntegrationspecTraits().endSpec();
-        }
+        decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
+            integration.editOrNewMetadata()
+                    .addToAnnotations("trait.camel.apache.org/jvm.enabled", "false")
+                    .endMetadata();
+        }));
     }
+
+    /*
+    @BuildStep
+    public void prometheus(
+        KamelBuildItem kamel,
+        BuildProducer<DecoratorBuildItem> decorators) {
+
+        if (!kamel.isEnabled()) {
+            return;
+        }
+
+        decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
+            integration.editOrNewSpec().editOrNewTraits()
+                    .editOrNewPrometheus()
+                    .withEnabled(true)
+                    .withPodMonitor(null)
+                    .endIntegrationspecPrometheus()
+                    .endIntegrationspecTraits()
+                    .endSpec();
+        }));
+    }
+
+     */
 }

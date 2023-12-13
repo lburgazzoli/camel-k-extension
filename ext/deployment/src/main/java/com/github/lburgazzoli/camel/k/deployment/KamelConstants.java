@@ -5,12 +5,12 @@ import static io.quarkus.kubernetes.spi.KubernetesDeploymentTargetBuildItem.DEFA
 public final class KamelConstants {
 
 
-    static final int KAMEL_PRIORITY = DEFAULT_PRIORITY;
+    public static final int KAMEL_PRIORITY = DEFAULT_PRIORITY;
 
-    static final String KAMEL = "kamel";
-    static final String KAMEL_INTEGRATION = "Integration";
-    static final String KAMEL_INTEGRATION_GROUP = "camel.apache.org";
-    static final String KAMEL_INTEGRATION_VERSION = "v1";
+    public static final String KAMEL = "kamel";
+    public static final String KAMEL_INTEGRATION = "Integration";
+    public static final String KAMEL_INTEGRATION_GROUP = "camel.apache.org";
+    public static final String KAMEL_INTEGRATION_VERSION = "v1";
 
 
     private KamelConstants() {

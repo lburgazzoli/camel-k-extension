@@ -15,6 +15,16 @@
     <artifactId>camel-k-app</artifactId>
     <packaging>jar</packaging>
 
+    <properties>
+        <quarkus.container-image.registry>quay.io</quarkus.container-image.registry>
+        <quarkus.container-image.group>lburgazzoli</quarkus.container-image.group>
+        <quarkus.container-image.name>${project.artifactId}</quarkus.container-image.name>
+
+        <quarkus.banner.enabled>false</quarkus.banner.enabled>
+        <quarkus.kubernetes.deployment-target>kamel</quarkus.kubernetes.deployment-target>
+        <quarkus.kubernetes.namespace>default</quarkus.kubernetes.namespace>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -36,7 +46,6 @@
             <groupId>org.apache.camel.quarkus</groupId>
             <artifactId>camel-quarkus-microprofile-health</artifactId>
         </dependency>
-
 
         <dependency>
             <groupId>io.quarkus</groupId>
