@@ -21,7 +21,6 @@
         <quarkus.container-image.name>${project.artifactId}</quarkus.container-image.name>
 
         <quarkus.banner.enabled>false</quarkus.banner.enabled>
-        <quarkus.kubernetes.deployment-target>kamel</quarkus.kubernetes.deployment-target>
         <quarkus.kubernetes.namespace>default</quarkus.kubernetes.namespace>
     </properties>
 
@@ -91,4 +90,34 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>kamel</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <quarkus.kubernetes.deployment-target>kamel</quarkus.kubernetes.deployment-target>
+            </properties>
+        </profile>
+        <profile>
+            <id>k8s</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <quarkus.kubernetes.deployment-target>kubernetes</quarkus.kubernetes.deployment-target>
+            </properties>
+        </profile>
+        <profile>
+            <id>kn</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <quarkus.kubernetes.deployment-target>knative</quarkus.kubernetes.deployment-target>
+            </properties>
+        </profile>
+    </profiles>
 </project>

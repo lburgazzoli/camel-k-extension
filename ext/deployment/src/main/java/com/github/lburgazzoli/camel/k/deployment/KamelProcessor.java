@@ -47,7 +47,6 @@ import java.util.function.Consumer;
 
 import static com.github.lburgazzoli.camel.k.deployment.KamelSupport.decorator;
 
-
 public class KamelProcessor {
     private static final String FEATURE = "kamel-extension";
 
@@ -56,13 +55,12 @@ public class KamelProcessor {
         return new FeatureBuildItem(FEATURE);
     }
 
-
     @BuildStep
     public void deploymentTarget(
-        ApplicationInfoBuildItem applicationInfo,
-        KamelConfig config,
-        BuildProducer<KubernetesDeploymentTargetBuildItem> deploymentTargets,
-        BuildProducer<KubernetesResourceMetadataBuildItem> resourceMeta) {
+            ApplicationInfoBuildItem applicationInfo,
+            KamelConfig config,
+            BuildProducer<KubernetesDeploymentTargetBuildItem> deploymentTargets,
+            BuildProducer<KubernetesResourceMetadataBuildItem> resourceMeta) {
 
         List<String> targets = KubernetesConfigUtil.getConfiguredDeploymentTargets();
         boolean enabled = targets.contains(KamelConstants.KAMEL);
@@ -83,16 +81,15 @@ public class KamelProcessor {
                     KamelConstants.KAMEL_INTEGRATION_GROUP,
                     KamelConstants.KAMEL_INTEGRATION_VERSION,
                     KamelConstants.KAMEL_INTEGRATION,
-                    config.name.orElseGet(applicationInfo::getName))
-            );
+                    config.name.orElseGet(applicationInfo::getName)));
         }
     }
 
     @BuildStep
     public KamelBuildItem kamel(
-        ApplicationInfoBuildItem applicationInfo,
-        KamelConfig config,
-        List<KubernetesDeploymentTargetBuildItem> targets) {
+            ApplicationInfoBuildItem applicationInfo,
+            KamelConfig config,
+            List<KubernetesDeploymentTargetBuildItem> targets) {
 
         boolean enabled = targets.stream()
                 .filter(KubernetesDeploymentTargetBuildItem::isEnabled)
@@ -101,8 +98,7 @@ public class KamelProcessor {
 
         return new KamelBuildItem(
                 enabled,
-                config.name.orElseGet(applicationInfo::getName)
-        );
+                config.name.orElseGet(applicationInfo::getName));
     }
 
     // ****************************************
@@ -122,16 +118,17 @@ public class KamelProcessor {
 
         decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
             integration.editOrNewMetadata()
-                    .withNamespace(ConfigProvider.getConfig().getOptionalValue("quarkus.kubernetes.namespace", String.class).orElse("default"))
+                    .withNamespace(ConfigProvider.getConfig()
+                            .getOptionalValue("quarkus.kubernetes.namespace", String.class).orElse("default"))
                     .endMetadata();
         }));
     }
 
     @BuildStep
     public void container(
-        KamelBuildItem kamel,
-        BuildProducer<DecoratorBuildItem> decorators,
-        Optional<ContainerImageInfoBuildItem> image) {
+            KamelBuildItem kamel,
+            BuildProducer<DecoratorBuildItem> decorators,
+            Optional<ContainerImageInfoBuildItem> image) {
 
         if (!kamel.isEnabled()) {
             return;
@@ -147,12 +144,13 @@ public class KamelProcessor {
                         .withPortName(null)
                         .withServicePort(null)
                         .withServicePortName(null)
-                    .endTraitsContainer()
-                    .endIntegrationspecTraits()
-                    .endSpec();
+                        .endTraitsContainer()
+                        .endIntegrationspecTraits()
+                        .endSpec();
             }));
         });
     }
+
     @BuildStep
     public void jvm(
             KamelBuildItem kamel,
@@ -169,11 +167,10 @@ public class KamelProcessor {
         }));
     }
 
-    /*
     @BuildStep
-    public void prometheus(
-        KamelBuildItem kamel,
-        BuildProducer<DecoratorBuildItem> decorators) {
+    public void service(
+            KamelBuildItem kamel,
+            BuildProducer<DecoratorBuildItem> decorators) {
 
         if (!kamel.isEnabled()) {
             return;
@@ -181,14 +178,12 @@ public class KamelProcessor {
 
         decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
             integration.editOrNewSpec().editOrNewTraits()
-                    .editOrNewPrometheus()
+                    .withNewService()
                     .withEnabled(true)
-                    .withPodMonitor(null)
-                    .endIntegrationspecPrometheus()
+                    .withNodePort(null)
+                    .endIntegrationspecService()
                     .endIntegrationspecTraits()
                     .endSpec();
         }));
     }
-
-     */
 }
