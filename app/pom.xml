@@ -22,6 +22,7 @@
 
         <quarkus.banner.enabled>false</quarkus.banner.enabled>
         <quarkus.kubernetes.namespace>default</quarkus.kubernetes.namespace>
+        <quarkus.jib.working-directory>/deployments/dependencies</quarkus.jib.working-directory>
     </properties>
 
     <dependencies>

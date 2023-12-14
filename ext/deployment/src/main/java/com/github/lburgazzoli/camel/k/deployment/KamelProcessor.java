@@ -152,22 +152,6 @@ public class KamelProcessor {
     }
 
     @BuildStep
-    public void jvm(
-            KamelBuildItem kamel,
-            BuildProducer<DecoratorBuildItem> decorators) {
-
-        if (!kamel.isEnabled()) {
-            return;
-        }
-
-        decorators.produce(decorator(kamel.getName(), (integration, meta) -> {
-            integration.editOrNewMetadata()
-                    .addToAnnotations("trait.camel.apache.org/jvm.enabled", "false")
-                    .endMetadata();
-        }));
-    }
-
-    @BuildStep
     public void service(
             KamelBuildItem kamel,
             BuildProducer<DecoratorBuildItem> decorators) {
@@ -180,6 +164,7 @@ public class KamelProcessor {
             integration.editOrNewSpec().editOrNewTraits()
                     .withNewService()
                     .withEnabled(true)
+                    .withAuto(false)
                     .withNodePort(null)
                     .endIntegrationspecService()
                     .endIntegrationspecTraits()
